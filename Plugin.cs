@@ -19,7 +19,7 @@ using static System.Net.Mime.MediaTypeNames;
 
 namespace GunAbility
 {
-    [BepInPlugin("org.000diggity000.LongAbility", "LongAbility", "1.0.0")]
+    [BepInPlugin("org.000diggity000.LongAbility", "LongAbility", "1.0.1")]
     public class Plugin : BaseUnityPlugin
     {
         public static System.IO.Stream GetResourceStream(string namespaceName, string path) => Assembly.GetExecutingAssembly().GetManifestResourceStream($"{namespaceName}.{path}");
@@ -86,6 +86,7 @@ namespace GunAbility
             parent.GetComponent<SpriteRenderer>().enabled = false;
             parent.AddComponent<PlayerBody>();
             parent.AddComponent<DPhysicsBox>();
+            parent.GetComponent<DPhysicsBox>().Scale = (Fix)1.5f;
             parent.AddComponent<PlayerCollision>();
             MonoUpdatable updatable = parent.AddComponent<T>();
 
@@ -234,6 +235,13 @@ namespace GunAbility
             {
                 return;
             }
+            if (SceneBounds.WaterHeight > body.position.y - (Fix)0.2f)
+            {
+                AbilityExitInfo info = default(AbilityExitInfo);
+                info.position = body.position;
+                info.selfImposedVelocity = body.selfImposedVelocity;
+                ExitAbility(info);
+            }
             if (playerPhysics.IsGrounded() && (Vec2.SqrMagnitude(this.body.selfImposedVelocity) > (Fix)1E-06f || playerPhysics.getAttachedGround() == null || !this.playerPhysics.getAttachedGround().isActiveAndEnabled))
             {
                 this.playerPhysics.gravity_modifier = (Fix)0.0f;
@@ -320,6 +328,7 @@ namespace GunAbility
             AbilityExitInfo info = default(AbilityExitInfo);
             info.position = body.position;
             info.selfImposedVelocity = body.selfImposedVelocity;
+
             float rotationRotation = (float)(Math.Atan2((float)inputVector.y, (float)inputVector.x) / (2 * Math.PI));
             body.rotation = (Fix)rotationRotation;
             float rotation = rotationRotation;
@@ -332,7 +341,7 @@ namespace GunAbility
             //BoplBody boplBody = FixTransform.InstantiateFixed<BoplBody>(new BoplBody(), new Vec2((Fix)100, (Fix)100), this.body.rotation);
             //GameObject bullet = GameObject.Instantiate(new GameObject(), (Vector2)pos, body.gameObject.transform.rotation);
             BoplBody boplBody = FixTransform.InstantiateFixed<BoplBody>(Plugin.Arrow, CurrentFirePoint(), this.body.rotation);
-            boplBody.gameObject.name = "bullet";
+            boplBody.gameObject.name = "bullet-diggity";
             boplBody.GetComponent<Arrow>().StickTo = new LayerMask();
             Bullets.Add(boplBody);
             //Destroy(test);
@@ -377,13 +386,14 @@ namespace GunAbility
         {
             throw new NotImplementedException();
         }
+
     }
     
     public class Patches
     {
         public static bool OnCollide(Arrow __instance)
         {
-            if(__instance.gameObject.name == "bullet")
+            if(__instance.gameObject.name == "bullet-diggity")
             {
                 Updater.DestroyFix(__instance.gameObject);
                 return false;
